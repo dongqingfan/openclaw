@@ -7,6 +7,20 @@ function symlinkType() {
   return process.platform === "win32" ? "junction" : "dir";
 }
 
+function ensureHardLink(sourcePath, targetPath) {
+  try {
+    fs.linkSync(sourcePath, targetPath);
+    return;
+  } catch (error) {
+    if (error?.code !== "EEXIST") {
+      throw error;
+    }
+  }
+
+  removePathIfExists(targetPath);
+  fs.linkSync(sourcePath, targetPath);
+}
+
 function relativeSymlinkTarget(sourcePath, targetPath) {
   const relativeTarget = path.relative(path.dirname(targetPath), sourcePath);
   return relativeTarget || ".";
@@ -35,6 +49,10 @@ function ensureSymlink(targetValue, targetPath, type) {
 }
 
 function symlinkPath(sourcePath, targetPath, type) {
+  if (process.platform === "win32" && type == null) {
+    ensureHardLink(sourcePath, targetPath);
+    return;
+  }
   ensureSymlink(relativeSymlinkTarget(sourcePath, targetPath), targetPath, type);
 }
 
